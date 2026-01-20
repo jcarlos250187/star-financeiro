@@ -6,6 +6,8 @@ import { ICONS } from '../constants';
 interface ClientsListProps {
   state: AppState;
   onAddClient: (client: Omit<Client, 'id' | 'createdAt'>) => void;
+  // Added onUpdateClient to interface to fix type mismatch with App.tsx
+  onUpdateClient: (id: string, clientData: Partial<Omit<Client, 'id' | 'createdAt'>>) => void;
   onSelectClient: (client: Client) => void;
 }
 

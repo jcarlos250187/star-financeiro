@@ -6,7 +6,6 @@ import ClientsList from './components/ClientsList';
 import AppointmentForm from './components/AppointmentForm';
 import ServicesManager from './components/ServicesManager';
 
-// Redefinindo interfaces localmente para consistência
 interface Client {
   id: string;
   name: string;
@@ -54,9 +53,10 @@ const App: React.FC = () => {
     appointments: []
   });
   const [selectedClientForAppointment, setSelectedClientForAppointment] = useState<any>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('star_financeiro_vfinal_v2');
+    const saved = localStorage.getItem('star_financeiro_vfinal_v3');
     if (saved) {
       try { 
         const parsed = JSON.parse(saved);
@@ -66,7 +66,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('star_financeiro_vfinal_v2', JSON.stringify(state));
+    localStorage.setItem('star_financeiro_vfinal_v3', JSON.stringify(state));
   }, [state]);
 
   const addClient = useCallback((clientData: any) => {
@@ -78,6 +78,13 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, clients: [newClient, ...prev.clients] }));
   }, []);
 
+  const updateClient = useCallback((id: string, clientData: any) => {
+    setState(prev => ({
+      ...prev,
+      clients: prev.clients.map(c => c.id === id ? { ...c, ...clientData } : c)
+    }));
+  }, []);
+
   const addService = useCallback((serviceData: any) => {
     const newService = { ...serviceData, id: Math.random().toString(36).substr(2, 9) };
     setState(prev => ({ ...prev, services: [...prev.services, newService] }));
@@ -87,10 +94,23 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, services: prev.services.filter(s => s.id !== id) }));
   }, []);
 
-  const addAppointment = useCallback((appointmentData: any) => {
-    const newAppointment = { ...appointmentData, id: Math.random().toString(36).substr(2, 9) };
-    setState(prev => ({ ...prev, appointments: [newAppointment, ...prev.appointments] }));
+  const saveAppointment = useCallback((appointmentData: any) => {
+    if (appointmentData.id) {
+      // Atualizar existente (Evita duplicação)
+      setState(prev => ({
+        ...prev,
+        appointments: prev.appointments.map(a => a.id === appointmentData.id ? appointmentData : a)
+      }));
+    } else {
+      // Criar novo
+      const newAppointment = { 
+        ...appointmentData, 
+        id: Math.random().toString(36).substr(2, 9) 
+      };
+      setState(prev => ({ ...prev, appointments: [newAppointment, ...prev.appointments] }));
+    }
     setSelectedClientForAppointment(null);
+    setEditingAppointment(null);
   }, []);
 
   const NavItem = ({ id, icon: Icon, label }: any) => {
@@ -123,9 +143,26 @@ const App: React.FC = () => {
 
       <main className="flex-1 md:ml-72 min-h-screen pb-32 md:pb-12 px-4 pt-6 md:px-12 md:pt-12">
         <div className="max-w-5xl mx-auto">
-          {view === 'dashboard' && <Dashboard state={state as any} />}
-          {view === 'clients' && <ClientsList state={state as any} onAddClient={addClient} onSelectClient={setSelectedClientForAppointment} />}
-          {view === 'services' && <ServicesManager state={state as any} onAddService={addService} onDeleteService={deleteService} />}
+          {view === 'dashboard' && (
+            <Dashboard 
+              state={state as any} 
+              onEditAppointment={(app) => {
+                setEditingAppointment(app);
+                setSelectedClientForAppointment(state.clients.find(c => c.id === app.clientId));
+              }}
+            />
+          )}
+          {view === 'clients' && (
+            <ClientsList 
+              state={state as any} 
+              onAddClient={addClient} 
+              onUpdateClient={updateClient}
+              onSelectClient={setSelectedClientForAppointment} 
+            />
+          )}
+          {view === 'services' && (
+            <ServicesManager state={state as any} onAddService={addService} onDeleteService={deleteService} />
+          )}
           {['reminders', 'ai'].includes(view) && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
                <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white mb-4 animate-pulse">
@@ -150,12 +187,16 @@ const App: React.FC = () => {
         <NavItem id="ai" icon={ICONS.Sparkles} label="S.T.A.R" />
       </div>
 
-      {selectedClientForAppointment && (
+      {(selectedClientForAppointment || editingAppointment) && (
         <AppointmentForm 
           state={state as any} 
           selectedClient={selectedClientForAppointment} 
-          onSave={addAppointment} 
-          onCancel={() => setSelectedClientForAppointment(null)} 
+          editingAppointment={editingAppointment}
+          onSave={saveAppointment} 
+          onCancel={() => {
+            setSelectedClientForAppointment(null);
+            setEditingAppointment(null);
+          }} 
         />
       )}
     </div>

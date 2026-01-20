@@ -1,38 +1,31 @@
 
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AppState } from '../types';
+import { AppState, Appointment } from '../types';
 import { ICONS } from '../constants';
 
 interface DashboardProps {
   state: AppState;
+  onEditAppointment: (app: Appointment) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ state }) => {
-  const [monthsCount, setMonthsCount] = useState(6);
+const Dashboard: React.FC<DashboardProps> = ({ state, onEditAppointment }) => {
+  const [monthsCount, setMonthsCount] = useState(1);
 
   const chartData = useMemo(() => {
     const data = [];
     const now = new Date();
     
     if (monthsCount === 1) {
-      // Visão detalhada de 30 dias (agrupada por blocos de 5 dias para melhor visualização)
-      for (let i = 5; i >= 0; i--) {
+      // Visão diária dos últimos 10 dias para maior detalhamento
+      for (let i = 9; i >= 0; i--) {
         const d = new Date();
-        d.setDate(now.getDate() - (i * 5));
+        d.setDate(now.getDate() - i);
         const label = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
         
-        const periodStart = new Date(d);
-        periodStart.setHours(0, 0, 0, 0);
-        const periodEnd = new Date(d);
-        periodEnd.setDate(d.getDate() + 5);
-        periodEnd.setHours(23, 59, 59, 999);
-
+        const dateStr = d.toISOString().split('T')[0];
         const total = state.appointments
-          .filter(a => {
-            const ad = new Date(a.date);
-            return ad >= periodStart && ad < periodEnd && a.status === 'paid';
-          })
+          .filter(a => a.date === dateStr && a.status === 'paid')
           .reduce((sum, a) => sum + a.customPrice, 0);
         
         data.push({ name: label, valor: total });
@@ -58,9 +51,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
     return data;
   }, [state.appointments, monthsCount]);
 
-  // Faturamento apenas do que foi efetivamente PAGO no mês atual
   const faturamentoMes = useMemo(() => {
     const now = new Date();
+    // Filtro rigoroso: apenas o que é do mês atual e está PAGO
     return state.appointments
       .filter(a => {
         const ad = new Date(a.date);
@@ -77,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
         <div className={`p-3 rounded-2xl ${variant === 'dark' ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}>
           <Icon className="w-5 h-5" />
         </div>
-        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 uppercase">Estável</span>
+        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 uppercase tracking-widest">Real</span>
       </div>
       <p className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${variant === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>{title}</p>
       <p className="text-2xl font-black">{value}</p>
@@ -89,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
       <header className="flex justify-between items-center md:items-end mb-8">
         <div>
           <h2 className="text-3xl font-black text-slate-900 leading-none tracking-tight">Dashboard</h2>
-          <p className="text-sm font-bold text-slate-400 mt-2">Gestão em tempo real do seu negócio.</p>
+          <p className="text-sm font-bold text-slate-400 mt-2 italic">Seu fluxo financeiro atualizado.</p>
         </div>
       </header>
 
@@ -105,14 +98,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           <div className="flex justify-between items-center mb-10">
             <div>
               <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Fluxo S.T.A.R</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase">Apenas valores confirmados (Pagos)</p>
+              <p className="text-xs font-bold text-slate-400 uppercase">Valores confirmados no período</p>
             </div>
             <select 
               className="bg-slate-50 border-none px-4 py-2 rounded-2xl text-xs font-black uppercase text-slate-600 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
               value={monthsCount}
               onChange={(e) => setMonthsCount(Number(e.target.value))}
             >
-              <option value={1}>Últimos 30 dias</option>
+              <option value={1}>Últimos 10 dias</option>
               <option value={3}>3 meses</option>
               <option value={6}>6 meses</option>
               <option value={12}>1 ano</option>
@@ -157,7 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                   stroke="#0f172a" 
                   strokeWidth={5} 
                   fill="url(#colorVal)" 
-                  animationDuration={1000}
+                  animationDuration={800}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -168,16 +161,20 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           <h3 className="text-lg font-black text-slate-900 uppercase mb-6">Últimas Ações</h3>
           <div className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar">
             {state.appointments.length > 0 ? (
-              [...state.appointments].reverse().slice(0, 8).map(app => {
+              [...state.appointments].reverse().slice(0, 10).map(app => {
                 const client = state.clients.find(c => c.id === app.clientId);
                 return (
-                  <div key={app.id} className="flex items-center gap-4 group">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black ${app.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                  <div 
+                    key={app.id} 
+                    onClick={() => onEditAppointment(app)}
+                    className="flex items-center gap-4 group cursor-pointer p-2 rounded-2xl hover:bg-slate-50 transition-colors"
+                  >
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg font-black ${app.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                       {client?.name.charAt(0) || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-slate-900 truncate">{client?.name || 'Cliente Removido'}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(app.date).toLocaleDateString('pt-BR')}</p>
+                      <p className="text-sm font-black text-slate-900 truncate">{client?.name || '---'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(app.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-black text-slate-900">R${app.customPrice.toFixed(2)}</p>
@@ -188,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
               })
             ) : (
               <div className="text-center py-12">
-                <p className="text-xs font-bold text-slate-300 uppercase italic">Aguardando seu primeiro atendimento...</p>
+                <p className="text-xs font-bold text-slate-300 uppercase">Sem movimentações</p>
               </div>
             )}
           </div>
