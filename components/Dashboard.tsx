@@ -14,18 +14,37 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
   const chartData = useMemo(() => {
     const data = [];
     const now = new Date();
-    for (let i = monthsCount - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
-      const mIdx = d.getMonth();
-      const yIdx = d.getFullYear();
-      const total = state.appointments
-        .filter(a => {
-          const ad = new Date(a.date);
-          return ad.getMonth() === mIdx && ad.getFullYear() === yIdx;
-        })
-        .reduce((sum, a) => sum + a.customPrice, 0);
-      data.push({ name: mLabel, valor: total });
+    
+    // Se for apenas 1 mês, vamos mostrar por semanas para não ficar um gráfico vazio
+    if (monthsCount === 1) {
+      for (let i = 3; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - (i * 7));
+        const label = `Sem ${4-i}`;
+        const total = state.appointments
+          .filter(a => {
+            const ad = new Date(a.date);
+            const diffTime = Math.abs(now.getTime() - ad.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= (i + 1) * 7 && diffDays > i * 7;
+          })
+          .reduce((sum, a) => sum + a.customPrice, 0);
+        data.push({ name: label, valor: total });
+      }
+    } else {
+      for (let i = monthsCount - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
+        const mIdx = d.getMonth();
+        const yIdx = d.getFullYear();
+        const total = state.appointments
+          .filter(a => {
+            const ad = new Date(a.date);
+            return ad.getMonth() === mIdx && ad.getFullYear() === yIdx;
+          })
+          .reduce((sum, a) => sum + a.customPrice, 0);
+        data.push({ name: mLabel, valor: total });
+      }
     }
     return data;
   }, [state.appointments, monthsCount]);
@@ -82,10 +101,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
               <p className="text-xs font-bold text-slate-400 uppercase">Ganhos reais no período</p>
             </div>
             <select 
-              className="bg-slate-50 border-none px-4 py-2 rounded-2xl text-xs font-black uppercase text-slate-500 outline-none cursor-pointer"
+              className="bg-slate-50 border-none px-4 py-2 rounded-2xl text-xs font-black uppercase text-slate-600 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
               value={monthsCount}
               onChange={(e) => setMonthsCount(Number(e.target.value))}
             >
+              <option value={1}>1 mês</option>
               <option value={3}>3 meses</option>
               <option value={6}>6 meses</option>
               <option value={12}>1 ano</option>
@@ -102,7 +122,13 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="0" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}} dy={15} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}} 
+                  dy={15} 
+                />
                 <YAxis hide />
                 <Tooltip 
                   cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }}
@@ -118,7 +144,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                     return null;
                   }}
                 />
-                <Area type="monotone" dataKey="valor" stroke="#0f172a" strokeWidth={5} fill="url(#colorVal)" />
+                <Area 
+                  type="monotone" 
+                  dataKey="valor" 
+                  stroke="#0f172a" 
+                  strokeWidth={5} 
+                  fill="url(#colorVal)" 
+                  animationDuration={1500}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -128,7 +161,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           <h3 className="text-lg font-black text-slate-900 uppercase mb-6">Atividade</h3>
           <div className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar">
             {state.appointments.length > 0 ? (
-              state.appointments.slice(-5).reverse().map(app => {
+              [...state.appointments].reverse().slice(0, 10).map(app => {
                 const client = state.clients.find(c => c.id === app.clientId);
                 return (
                   <div key={app.id} className="flex items-center gap-4 group">
@@ -136,12 +169,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                       {client?.name.charAt(0)}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-black text-slate-900 truncate">{client?.name}</p>
+                      <p className="text-sm font-black text-slate-900 truncate">{client?.name || 'Ex-cliente'}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase">{app.date}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-black text-slate-900">R${app.customPrice}</p>
-                      <p className={`text-[9px] font-black uppercase ${app.status === 'paid' ? 'text-emerald-500' : 'text-slate-300'}`}>{app.status}</p>
+                      <p className={`text-[9px] font-black uppercase ${app.status === 'paid' ? 'text-emerald-500' : 'text-slate-300'}`}>{app.status === 'paid' ? 'Pago' : 'Pendente'}</p>
                     </div>
                   </div>
                 )
