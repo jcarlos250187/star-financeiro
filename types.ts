@@ -5,6 +5,7 @@ export interface Client {
   phone: string;
   email: string;
   observations: string;
+  deliveryDate?: string; // Novo campo para data de entrega
   createdAt: string;
 }
 

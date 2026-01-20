@@ -14,7 +14,13 @@ interface ClientsListProps {
 const ClientsList: React.FC<ClientsListProps> = ({ state, onAddClient, onDeleteClient, onSelectClient }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', observations: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    phone: '', 
+    email: '', 
+    observations: '',
+    deliveryDate: '' // Estado para o novo campo
+  });
 
   const filteredClients = state.clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -24,7 +30,7 @@ const ClientsList: React.FC<ClientsListProps> = ({ state, onAddClient, onDeleteC
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddClient(formData);
-    setFormData({ name: '', phone: '', email: '', observations: '' });
+    setFormData({ name: '', phone: '', email: '', observations: '', deliveryDate: '' });
     setIsAdding(false);
   };
 
@@ -43,28 +49,41 @@ const ClientsList: React.FC<ClientsListProps> = ({ state, onAddClient, onDeleteC
       {isAdding && (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-[32px] shadow-md border border-slate-100 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Novo Cadastro</h3>
+          
           <input 
             type="text" required placeholder="Nome Completo" 
             className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 outline-none font-bold text-slate-800"
             value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
           />
-          <div className="grid grid-cols-2 gap-3">
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input 
               type="tel" placeholder="WhatsApp" 
               className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 outline-none font-bold text-slate-800"
               value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
             />
-            <input 
-              type="email" placeholder="E-mail" 
-              className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 outline-none font-bold text-slate-800"
-              value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-            />
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Data da Entrega</label>
+              <input 
+                type="date" 
+                className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 outline-none font-bold text-slate-800"
+                value={formData.deliveryDate} onChange={e => setFormData({...formData, deliveryDate: e.target.value})}
+              />
+            </div>
           </div>
+
+          <input 
+            type="email" placeholder="E-mail (opcional)" 
+            className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 outline-none font-bold text-slate-800"
+            value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+          />
+
           <textarea 
             placeholder="Observações do cliente" 
             className="w-full p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 outline-none h-24 font-medium text-slate-600"
             value={formData.observations} onChange={e => setFormData({...formData, observations: e.target.value})}
           />
+          
           <div className="flex gap-2">
             <button type="submit" className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl">Salvar</button>
             <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-xs">Sair</button>
@@ -95,7 +114,14 @@ const ClientsList: React.FC<ClientsListProps> = ({ state, onAddClient, onDeleteC
               </div>
               <div className="min-w-0">
                 <h4 className="font-black text-slate-900 truncate">{client.name}</h4>
-                <p className="text-xs font-bold text-slate-400">{client.phone}</p>
+                <div className="flex gap-2 items-center">
+                  <p className="text-xs font-bold text-slate-400">{client.phone}</p>
+                  {client.deliveryDate && (
+                    <span className="text-[9px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-black uppercase">
+                      Entrega: {new Date(client.deliveryDate).toLocaleDateString('pt-BR')}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">

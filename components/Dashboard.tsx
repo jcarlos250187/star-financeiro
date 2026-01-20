@@ -17,7 +17,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onEditAppointment }) => {
     const now = new Date();
     
     if (monthsCount === 1) {
-      // Visão diária dos últimos 10 dias para maior detalhamento
       for (let i = 9; i >= 0; i--) {
         const d = new Date();
         d.setDate(now.getDate() - i);
@@ -31,7 +30,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onEditAppointment }) => {
         data.push({ name: label, valor: total });
       }
     } else {
-      // Visão mensal
       for (let i = monthsCount - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const mLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
@@ -53,7 +51,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onEditAppointment }) => {
 
   const faturamentoMes = useMemo(() => {
     const now = new Date();
-    // Filtro rigoroso: apenas o que é do mês atual e está PAGO
     return state.appointments
       .filter(a => {
         const ad = new Date(a.date);
@@ -159,7 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onEditAppointment }) => {
 
         <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 uppercase mb-6">Últimas Ações</h3>
-          <div className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar">
+          <div className="space-y-4 max-h-[350px] overflow-y-auto no-scrollbar">
             {state.appointments.length > 0 ? (
               [...state.appointments].reverse().slice(0, 10).map(app => {
                 const client = state.clients.find(c => c.id === app.clientId);
@@ -174,7 +171,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onEditAppointment }) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-slate-900 truncate">{client?.name || '---'}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(app.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</p>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Atend: {new Date(app.date).toLocaleDateString('pt-BR')}</span>
+                        {client?.deliveryDate && (
+                          <span className="text-[9px] font-black text-indigo-600 uppercase">Entrega: {new Date(client.deliveryDate).toLocaleDateString('pt-BR')}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-black text-slate-900">R${app.customPrice.toFixed(2)}</p>
