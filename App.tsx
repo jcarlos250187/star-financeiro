@@ -6,7 +6,7 @@ import ClientsList from './components/ClientsList';
 import AppointmentForm from './components/AppointmentForm';
 import ServicesManager from './components/ServicesManager';
 
-// Redefinindo interfaces localmente para evitar erros de resolução de arquivo no preview
+// Redefinindo interfaces localmente para consistência
 interface Client {
   id: string;
   name: string;
@@ -56,7 +56,7 @@ const App: React.FC = () => {
   const [selectedClientForAppointment, setSelectedClientForAppointment] = useState<any>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('star_financeiro_vfinal');
+    const saved = localStorage.getItem('star_financeiro_vfinal_v2');
     if (saved) {
       try { 
         const parsed = JSON.parse(saved);
@@ -66,7 +66,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('star_financeiro_vfinal', JSON.stringify(state));
+    localStorage.setItem('star_financeiro_vfinal_v2', JSON.stringify(state));
   }, [state]);
 
   const addClient = useCallback((clientData: any) => {
@@ -115,9 +115,9 @@ const App: React.FC = () => {
           <p className="text-[10px] tracking-[0.4em] text-slate-400 uppercase font-bold -mt-1">Financeiro</p>
         </div>
         <nav className="space-y-2">
-          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${view === 'dashboard' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:bg-slate-50'}`}><ICONS.Home className="w-5 h-5"/> Dashboard</button>
-          <button onClick={() => setView('clients')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${view === 'clients' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:bg-slate-50'}`}><ICONS.Users className="w-5 h-5"/> Clientes</button>
-          <button onClick={() => setView('services')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${view === 'services' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:bg-slate-50'}`}><ICONS.Briefcase className="w-5 h-5"/> Serviços</button>
+          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${view === 'dashboard' ? 'bg-slate-900 text-white shadow-xl translate-x-1' : 'text-slate-500 hover:bg-slate-50'}`}><ICONS.Home className="w-5 h-5"/> Dashboard</button>
+          <button onClick={() => setView('clients')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${view === 'clients' ? 'bg-slate-900 text-white shadow-xl translate-x-1' : 'text-slate-500 hover:bg-slate-50'}`}><ICONS.Users className="w-5 h-5"/> Clientes</button>
+          <button onClick={() => setView('services')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${view === 'services' ? 'bg-slate-900 text-white shadow-xl translate-x-1' : 'text-slate-500 hover:bg-slate-50'}`}><ICONS.Briefcase className="w-5 h-5"/> Serviços</button>
         </nav>
       </aside>
 
@@ -131,8 +131,8 @@ const App: React.FC = () => {
                <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white mb-4 animate-pulse">
                  <ICONS.Sparkles className="w-8 h-8" />
                </div>
-               <h2 className="text-2xl font-black text-slate-900">Módulo em Breve</h2>
-               <p className="text-slate-400 font-medium">A inteligência S.T.A.R está chegando.</p>
+               <h2 className="text-2xl font-black text-slate-900 uppercase">Módulo em Breve</h2>
+               <p className="text-slate-400 font-bold max-w-xs mx-auto mt-2">Estamos integrando novas funções para acelerar seu negócio.</p>
             </div>
           )}
         </div>
@@ -147,7 +147,7 @@ const App: React.FC = () => {
            </button>
         </div>
         <NavItem id="services" icon={ICONS.Briefcase} label="Serviços" />
-        <NavItem id="ai" icon={ICONS.Sparkles} label="S.T.A.R AI" />
+        <NavItem id="ai" icon={ICONS.Sparkles} label="S.T.A.R" />
       </div>
 
       {selectedClientForAppointment && (

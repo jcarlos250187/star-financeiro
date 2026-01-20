@@ -15,46 +15,58 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
     const data = [];
     const now = new Date();
     
-    // Se for apenas 1 mês, vamos mostrar por semanas para não ficar um gráfico vazio
     if (monthsCount === 1) {
-      for (let i = 3; i >= 0; i--) {
+      // Visão detalhada de 30 dias (agrupada por blocos de 5 dias para melhor visualização)
+      for (let i = 5; i >= 0; i--) {
         const d = new Date();
-        d.setDate(now.getDate() - (i * 7));
-        const label = `Sem ${4-i}`;
+        d.setDate(now.getDate() - (i * 5));
+        const label = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+        
+        const periodStart = new Date(d);
+        periodStart.setHours(0, 0, 0, 0);
+        const periodEnd = new Date(d);
+        periodEnd.setDate(d.getDate() + 5);
+        periodEnd.setHours(23, 59, 59, 999);
+
         const total = state.appointments
           .filter(a => {
             const ad = new Date(a.date);
-            const diffTime = Math.abs(now.getTime() - ad.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays <= (i + 1) * 7 && diffDays > i * 7;
+            return ad >= periodStart && ad < periodEnd && a.status === 'paid';
           })
           .reduce((sum, a) => sum + a.customPrice, 0);
+        
         data.push({ name: label, valor: total });
       }
     } else {
+      // Visão mensal
       for (let i = monthsCount - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const mLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
         const mIdx = d.getMonth();
         const yIdx = d.getFullYear();
+        
         const total = state.appointments
           .filter(a => {
             const ad = new Date(a.date);
-            return ad.getMonth() === mIdx && ad.getFullYear() === yIdx;
+            return ad.getMonth() === mIdx && ad.getFullYear() === yIdx && a.status === 'paid';
           })
           .reduce((sum, a) => sum + a.customPrice, 0);
+        
         data.push({ name: mLabel, valor: total });
       }
     }
     return data;
   }, [state.appointments, monthsCount]);
 
+  // Faturamento apenas do que foi efetivamente PAGO no mês atual
   const faturamentoMes = useMemo(() => {
     const now = new Date();
     return state.appointments
       .filter(a => {
         const ad = new Date(a.date);
-        return ad.getMonth() === now.getMonth() && ad.getFullYear() === now.getFullYear();
+        return ad.getMonth() === now.getMonth() && 
+               ad.getFullYear() === now.getFullYear() && 
+               a.status === 'paid';
       })
       .reduce((sum, a) => sum + a.customPrice, 0);
   }, [state.appointments]);
@@ -65,7 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
         <div className={`p-3 rounded-2xl ${variant === 'dark' ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}>
           <Icon className="w-5 h-5" />
         </div>
-        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 uppercase">+12%</span>
+        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 uppercase">Estável</span>
       </div>
       <p className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${variant === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>{title}</p>
       <p className="text-2xl font-black">{value}</p>
@@ -73,24 +85,19 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-1000">
+    <div className="space-y-6 animate-in fade-in duration-700">
       <header className="flex justify-between items-center md:items-end mb-8">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 leading-none">Dashboard</h2>
-          <p className="text-sm font-bold text-slate-400 mt-2">Olá! Aqui está seu controle S.T.A.R</p>
-        </div>
-        <div className="md:hidden">
-          <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-             <ICONS.Home className="w-6 h-6" />
-          </div>
+          <h2 className="text-3xl font-black text-slate-900 leading-none tracking-tight">Dashboard</h2>
+          <p className="text-sm font-bold text-slate-400 mt-2">Gestão em tempo real do seu negócio.</p>
         </div>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Faturamento Mês" value={`R$ ${faturamentoMes.toLocaleString()}`} icon={ICONS.Wallet} variant="dark" />
+        <StatCard title="Recebido (Mês)" value={`R$ ${faturamentoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={ICONS.Wallet} variant="dark" />
         <StatCard title="Total Clientes" value={state.clients.length} icon={ICONS.Users} />
         <StatCard title="Atendimentos" value={state.appointments.length} icon={ICONS.Briefcase} />
-        <StatCard title="Pendências" value={state.appointments.filter(a => a.status === 'pending').length} icon={ICONS.Clock} />
+        <StatCard title="Pendentes" value={state.appointments.filter(a => a.status === 'pending').length} icon={ICONS.Clock} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -98,14 +105,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           <div className="flex justify-between items-center mb-10">
             <div>
               <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Fluxo S.T.A.R</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase">Ganhos reais no período</p>
+              <p className="text-xs font-bold text-slate-400 uppercase">Apenas valores confirmados (Pagos)</p>
             </div>
             <select 
               className="bg-slate-50 border-none px-4 py-2 rounded-2xl text-xs font-black uppercase text-slate-600 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
               value={monthsCount}
               onChange={(e) => setMonthsCount(Number(e.target.value))}
             >
-              <option value={1}>1 mês</option>
+              <option value={1}>Últimos 30 dias</option>
               <option value={3}>3 meses</option>
               <option value={6}>6 meses</option>
               <option value={12}>1 ano</option>
@@ -137,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                       return (
                         <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-2xl border-none">
                           <p className="text-[10px] font-bold text-slate-400 mb-1">{payload[0].payload.name}</p>
-                          <p className="text-sm font-black">R$ {payload[0].value?.toLocaleString()}</p>
+                          <p className="text-sm font-black">R$ {payload[0].value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </div>
                       );
                     }
@@ -150,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                   stroke="#0f172a" 
                   strokeWidth={5} 
                   fill="url(#colorVal)" 
-                  animationDuration={1500}
+                  animationDuration={1000}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -158,30 +165,30 @@ const Dashboard: React.FC<DashboardProps> = ({ state }) => {
         </div>
 
         <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-          <h3 className="text-lg font-black text-slate-900 uppercase mb-6">Atividade</h3>
+          <h3 className="text-lg font-black text-slate-900 uppercase mb-6">Últimas Ações</h3>
           <div className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar">
             {state.appointments.length > 0 ? (
-              [...state.appointments].reverse().slice(0, 10).map(app => {
+              [...state.appointments].reverse().slice(0, 8).map(app => {
                 const client = state.clients.find(c => c.id === app.clientId);
                 return (
                   <div key={app.id} className="flex items-center gap-4 group">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black ${app.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
-                      {client?.name.charAt(0)}
+                      {client?.name.charAt(0) || '?'}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black text-slate-900 truncate">{client?.name || 'Ex-cliente'}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">{app.date}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-slate-900 truncate">{client?.name || 'Cliente Removido'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(app.date).toLocaleDateString('pt-BR')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-black text-slate-900">R${app.customPrice}</p>
-                      <p className={`text-[9px] font-black uppercase ${app.status === 'paid' ? 'text-emerald-500' : 'text-slate-300'}`}>{app.status === 'paid' ? 'Pago' : 'Pendente'}</p>
+                      <p className="text-sm font-black text-slate-900">R${app.customPrice.toFixed(2)}</p>
+                      <p className={`text-[9px] font-black uppercase ${app.status === 'paid' ? 'text-emerald-500' : 'text-amber-500'}`}>{app.status === 'paid' ? 'Pago' : 'Pendente'}</p>
                     </div>
                   </div>
                 )
               })
             ) : (
               <div className="text-center py-12">
-                <p className="text-xs font-bold text-slate-300 uppercase">Sem movimentações</p>
+                <p className="text-xs font-bold text-slate-300 uppercase italic">Aguardando seu primeiro atendimento...</p>
               </div>
             )}
           </div>
