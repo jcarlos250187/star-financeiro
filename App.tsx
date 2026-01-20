@@ -5,38 +5,7 @@ import Dashboard from './components/Dashboard';
 import ClientsList from './components/ClientsList';
 import AppointmentForm from './components/AppointmentForm';
 import ServicesManager from './components/ServicesManager';
-
-interface Client {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  observations: string;
-  createdAt: string;
-}
-
-interface ServiceType {
-  id: string;
-  name: string;
-  defaultPrice: number;
-}
-
-interface Appointment {
-  id: string;
-  clientId: string;
-  serviceId: string;
-  date: string;
-  time: string;
-  customPrice: number;
-  status: 'paid' | 'pending';
-  observations: string;
-}
-
-interface AppState {
-  clients: Client[];
-  services: ServiceType[];
-  appointments: Appointment[];
-}
+import { Client, Appointment, AppState } from './types';
 
 const LogoSVG = ({ className = "w-12 h-12" }) => (
   <svg viewBox="0 0 100 100" className={className}>
@@ -52,11 +21,11 @@ const App: React.FC = () => {
     services: INITIAL_SERVICES,
     appointments: []
   });
-  const [selectedClientForAppointment, setSelectedClientForAppointment] = useState<any>(null);
+  const [selectedClientForAppointment, setSelectedClientForAppointment] = useState<Client | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('star_financeiro_vfinal_v3');
+    const saved = localStorage.getItem('star_financeiro_vfinal_v4');
     if (saved) {
       try { 
         const parsed = JSON.parse(saved);
@@ -66,7 +35,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('star_financeiro_vfinal_v3', JSON.stringify(state));
+    localStorage.setItem('star_financeiro_vfinal_v4', JSON.stringify(state));
   }, [state]);
 
   const addClient = useCallback((clientData: any) => {
@@ -85,6 +54,16 @@ const App: React.FC = () => {
     }));
   }, []);
 
+  const deleteClient = useCallback((id: string) => {
+    if (confirm("Deseja realmente excluir este cliente? Todos os atendimentos dele também serão apagados.")) {
+      setState(prev => ({
+        ...prev,
+        clients: prev.clients.filter(c => c.id !== id),
+        appointments: prev.appointments.filter(a => a.clientId !== id)
+      }));
+    }
+  }, []);
+
   const addService = useCallback((serviceData: any) => {
     const newService = { ...serviceData, id: Math.random().toString(36).substr(2, 9) };
     setState(prev => ({ ...prev, services: [...prev.services, newService] }));
@@ -96,13 +75,11 @@ const App: React.FC = () => {
 
   const saveAppointment = useCallback((appointmentData: any) => {
     if (appointmentData.id) {
-      // Atualizar existente (Evita duplicação)
       setState(prev => ({
         ...prev,
         appointments: prev.appointments.map(a => a.id === appointmentData.id ? appointmentData : a)
       }));
     } else {
-      // Criar novo
       const newAppointment = { 
         ...appointmentData, 
         id: Math.random().toString(36).substr(2, 9) 
@@ -111,6 +88,17 @@ const App: React.FC = () => {
     }
     setSelectedClientForAppointment(null);
     setEditingAppointment(null);
+  }, []);
+
+  const deleteAppointment = useCallback((id: string) => {
+    if (confirm("Excluir este atendimento?")) {
+      setState(prev => ({
+        ...prev,
+        appointments: prev.appointments.filter(a => a.id !== id)
+      }));
+      setEditingAppointment(null);
+      setSelectedClientForAppointment(null);
+    }
   }, []);
 
   const NavItem = ({ id, icon: Icon, label }: any) => {
@@ -145,23 +133,24 @@ const App: React.FC = () => {
         <div className="max-w-5xl mx-auto">
           {view === 'dashboard' && (
             <Dashboard 
-              state={state as any} 
+              state={state} 
               onEditAppointment={(app) => {
                 setEditingAppointment(app);
-                setSelectedClientForAppointment(state.clients.find(c => c.id === app.clientId));
+                setSelectedClientForAppointment(state.clients.find(c => c.id === app.clientId) || null);
               }}
             />
           )}
           {view === 'clients' && (
             <ClientsList 
-              state={state as any} 
+              state={state} 
               onAddClient={addClient} 
               onUpdateClient={updateClient}
+              onDeleteClient={deleteClient}
               onSelectClient={setSelectedClientForAppointment} 
             />
           )}
           {view === 'services' && (
-            <ServicesManager state={state as any} onAddService={addService} onDeleteService={deleteService} />
+            <ServicesManager state={state} onAddService={addService} onDeleteService={deleteService} />
           )}
           {['reminders', 'ai'].includes(view) && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -189,10 +178,11 @@ const App: React.FC = () => {
 
       {(selectedClientForAppointment || editingAppointment) && (
         <AppointmentForm 
-          state={state as any} 
+          state={state} 
           selectedClient={selectedClientForAppointment} 
           editingAppointment={editingAppointment}
           onSave={saveAppointment} 
+          onDelete={deleteAppointment}
           onCancel={() => {
             setSelectedClientForAppointment(null);
             setEditingAppointment(null);
